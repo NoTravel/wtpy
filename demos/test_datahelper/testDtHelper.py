@@ -76,6 +76,68 @@ class PickleReader:
 
         
         return True
+    
+    def get_tick_ztcustom(self, curTick:POINTER(WTSTickStruct), idx:int) -> bool:
+        row = self.pd.iloc[idx]
+
+
+        # open 	float 	开盘价
+        # high 	float 	最高价
+        # low 	float 	最低价
+        # price 	float 	最新价
+        # cum_volume 	float 	成交总量/最新成交量,累计值
+        # cum_amount 	float 	成交总金额/最新成交额,累计值
+        # trade_type 	int 	交易类型 1: ‘双开’, 2: ‘双平’, 3: ‘多开’, 4: ‘空开’, 5: ‘空平’, 6: ‘多平’, 7: ‘多换’, 8: ‘空换’
+        # last_volume 	int 	瞬时成交额
+        # cum_position 	int 	合约持仓量(期),累计值
+        # last_amount 	float 	瞬时成交额
+        # created_at 	datetime.datetime 	创建时间
+        # quotes 	list[quote] 	期货提供买卖一档数据; 跌停时无买方报价，涨停时无卖方报价
+
+        exchg,code = ['SHFE','SP']
+        curTick.contents.exchg = bytes(exchg, 'utf-8')
+        curTick.contents.code = bytes(code.upper() if exchg=='CFFEX' or exchg=='CZCE' else code.lower(),'utf-8')
+
+        curTick.contents.open = row.open
+        curTick.contents.high = row.high
+        curTick.contents.low = row.low
+        curTick.contents.price = row['last']
+
+        curTick.contents.action_date = int(row.name.strftime("%Y%m%d"))
+        curTick.contents.trading_date = int(row.trading_date.strftime("%Y%m%d"))
+        curTick.contents.action_time = int(int(row.name.strftime("%H%M%S%f"))/1000)
+
+        curTick.contents.total_volume = int(row.volume)
+        curTick.contents.total_turnover = row.total_turnover
+        
+        curTick.contents.open_interest = int(row.open_interest)
+
+        curTick.contents.bid_prices[0] = row.b1
+        curTick.contents.bid_qty[0] = int(row.b1_v)
+        curTick.contents.bid_prices[1] = row.b2
+        curTick.contents.bid_qty[1] = int(row.b2_v)
+        curTick.contents.bid_prices[2] = row.b3
+        curTick.contents.bid_qty[2] = int(row.b3_v)
+        curTick.contents.bid_prices[3] = row.b4
+        curTick.contents.bid_qty[3] = int(row.b4_v)
+        curTick.contents.bid_prices[4] = row.b5
+        curTick.contents.bid_qty[4] = int(row.b5_v)
+
+        curTick.contents.ask_prices[0] = row.a1
+        curTick.contents.ask_qty[0] = int(row.a1_v)
+        curTick.contents.ask_prices[1] = row.a2
+        curTick.contents.ask_qty[1] = int(row.a2_v)
+        curTick.contents.ask_prices[2] = row.a3
+        curTick.contents.ask_qty[2] = int(row.a3_v)
+        curTick.contents.ask_prices[3] = row.a4
+        curTick.contents.ask_qty[3] = int(row.a4_v)
+        curTick.contents.ask_prices[4] = row.a5
+        curTick.contents.ask_qty[4] = int(row.a5_v)
+
+        print(curTick.contents)
+
+        
+        return True
 
 
 
@@ -114,7 +176,8 @@ class CsvReader:
             curBar.contents.money = float(items[7])
 
         return True
-
+import os
+s_dir_thisfile = os.path.dirname(os.path.realpath(__file__))
 dtHelper = WtDataHelper()
 # 转储分钟线
 # reader = CsvReader("./CFFEX.IC.HOT_m1.csv", isMin=True)
@@ -125,10 +188,17 @@ dtHelper = WtDataHelper()
 # dtHelper.trans_bars(barFile="./test_d.dsb", getter=reader.get_bar, count=len(reader.lines), period="d")
 
 # 转储tick
-reader = PickleReader()
-reader.load_ticks('./CZCE.ZC.2021-04-27.pkl')
-dtHelper.trans_ticks(tickFile="./CZCE.ZC.2021-04-27.dsb", getter=reader.get_tick, count=10000)#len(reader)
+#reader = PickleReader()
+#reader.load_ticks('./CZCE.ZC.2021-04-27.pkl')
+#dtHelper.trans_ticks(tickFile="./CZCE.ZC.2021-04-27.dsb", getter=reader.get_tick, count=10000)#len(reader)
 
+# 我定制的
+s_dir = s_dir_thisfile + "\\SP2201\\"
+l_sp_pkls = [x for x in os.listdir(s_dir) if x[-2:] == 'kl']
+for s_file in l_sp_pkls:
+    reader = PickleReader()
+    reader.load_ticks(s_dir + s_file)
+    dtHelper.trans_ticks(tickFile="./" + s_file[:-4] + ".dsb", getter=reader.get_tick_ztcustom, count=len(reader))#
 
 # 测试重采样
 # sessMgr = SessionMgr()
