@@ -1419,3 +1419,43 @@ class WtBtAnalyst:
             f = open(filename,"w")
             f.write(json.dumps(sumObj, indent=4, ensure_ascii=True))
             f.close()
+    
+    def run_multiple(self, outname:str, outFileName:str = ''):
+        if len(self.__strategies__.keys()) == 0:
+            raise Exception("strategies is empty")
+
+        df_funds_total = pd.DataFrame()
+        init_capital = 0
+        annual_days = 0
+        rf = 0
+        for sname in self.__strategies__:
+            sInfo = self.__strategies__[sname]
+            folder = sInfo["folder"]
+            print("start PnL analyzing for strategy %s……" % (sname))
+
+            df_funds = pd.read_csv(folder + "funds.csv")
+            print("fund logs loaded……")
+            if df_funds.shape[0]>0:
+                if df_funds_total.shape[0] == 0:
+                    df_funds_total = df_funds_total.append(pd.DataFrame(data = df_funds), ignore_index = True)
+                else:
+                    if df_funds_total.iloc[-1,0] != df_funds.iloc[0,0]:
+                        df_funds_total = df_funds_total.append(pd.DataFrame(data = df_funds), ignore_index = True)
+                    else:
+                        for i in range(df_funds.shape[0]):
+                            df_funds.iloc[i,1:] = df_funds.iloc[i,1:] + df_funds_total.iloc[-1,1:]
+                        df_funds_total = df_funds_total.append(pd.DataFrame(data = df_funds.iloc[1:,:]), ignore_index = True)
+                    
+        
+        
+            init_capital = sInfo["cap"]
+            annual_days = sInfo["atd"]
+            rf = sInfo["rf"]
+        print(df_funds_total)    
+        if len(outFileName) == 0:
+            outFileName = 'Strategy[%s]_PnLAnalyzing_%s_%s.xlsx' % (outname, df_funds_total['date'][0], df_funds_total['date'].iloc[-1])
+        workbook = Workbook(outFileName)
+        funds_analyze(workbook, df_funds_total, capital=init_capital, rf=rf, period=annual_days)
+        workbook.close()
+
+        print("PnL analyzing of strategy %s done" % (outname))
