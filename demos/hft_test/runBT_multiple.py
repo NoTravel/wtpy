@@ -53,13 +53,17 @@ class WtMultipleBacktest:
             
             thisGrp = dict()
             thisGrp['i_count'] = i_count
-            thisGrp['int_start'] = int_start
+            
             
             df_tradelist = pd.read_csv(s_dir_thisfile + "\\tradelists_backtest\\tradelist_backtest_" + str(i_count)+".csv", index_col=0)
-            thisGrp['int_end'] = int_end = int(format(datetime.strptime(df_tradelist.index[-1],"%Y/%m/%d %H:%M"),'%Y%m%d%H%M'))
+            
+            thisGrp['int_start'] = int_start = int(format(datetime.strptime(df_tradelist.index[0],"%Y/%m/%d %H:%M"),'%Y%m%d%H%M'))
+            
+            s_date = df_tradelist.loc[df_tradelist.index[-1],'tradingDate']
+            thisGrp['int_end'] = int_end = int(format(datetime.strptime(s_date + ' 15:00',"%Y/%m/%d %H:%M"),'%Y%m%d%H%M'))
             
             param_groups.append(thisGrp)
-            int_start = int_end
+            
         return param_groups
     
     def __start_task__(self, params:dict):
