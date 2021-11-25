@@ -57,11 +57,13 @@ class WtMultipleBacktest:
             
             df_tradelist = pd.read_csv(s_dir_thisfile + "\\tradelists_backtest\\tradelist_backtest_" + str(i_count)+".csv", index_col=0)
             
-            thisGrp['int_start'] = int_start = int(format(datetime.strptime(df_tradelist.index[0],"%Y/%m/%d %H:%M"),'%Y%m%d%H%M'))
+            thisGrp['int_start'] = int_start = int(format(datetime.strptime(df_tradelist.index[0],"%Y-%m-%d %H:%M:%S"),'%Y%m%d%H%M'))
             
             s_date = df_tradelist.loc[df_tradelist.index[-1],'tradingDate']
-            thisGrp['int_end'] = int_end = int(format(datetime.strptime(s_date + ' 15:00',"%Y/%m/%d %H:%M"),'%Y%m%d%H%M'))
-            
+            thisGrp['int_end'] = int_end = int(format(datetime.strptime(s_date + ' 15:00',"%Y-%m-%d %H:%M"),'%Y%m%d%H%M'))
+            print(thisGrp)
+            thisGrp['contract_1'] = df_tradelist.loc[df_tradelist.index[0],'contract_1']
+            thisGrp['contract_2'] = df_tradelist.loc[df_tradelist.index[0],'contract_2']
             param_groups.append(thisGrp)
             
         return param_groups
@@ -90,25 +92,26 @@ class WtMultipleBacktest:
         i_count = params['i_count']
         int_start = params['int_start']
         int_end = params['int_end']
-        
+        contract_1 = params['contract_1']
+        contract_2 = params['contract_2']
         
         # 创建一个运行环境，并加入策略
         engine = WtBtEngine(EngineType.ET_HFT)
-        engine.init(s_dir_thisfile + '\\common\\', s_dir_thisfile + "\\configbt.json")
+        engine.init(s_dir_thisfile + '\\common\\', s_dir_thisfile + "\\configbt_2.json")
         engine.configBacktest(int_start, int_end)
-        engine.configBTStorage(mode="csv", path=s_dir_thisfile + "\\storage\\")
+        engine.configBTStorage(mode="csv", path="C:/Users/zhouyou/Documents/BaiduNetdiskWorkspace/futuredata/SP/tick/")
         engine.commitBTConfig()
 
         s_name = 'hft_sp_2contracts_multiple_' + str(i_count)
         straInfo = mySimpleArbitrageStrategy(name=s_name,
-                            code1="SHFE.sp.cont0",
-                            code2="SHFE.sp.cont1",
+                            code1="SHFE.sp."+contract_1[2:],
+                            code2="SHFE.sp."+contract_2[2:],
                             expsecs=20,
                             offset=0,
                             file_tradelist = s_dir_thisfile + "\\tradelists_backtest\\tradelist_backtest_" + str(i_count)+".csv",
                             tradingHorizonMin= 10,
-                            slotsTotal= 10,
-                            slotsEachTime= 2,
+                            slotsTotal= 2,
+                            slotsEachTime= 1,
                             coldSeconds= 20,
                             addtick_open= 2,
                             addtick_close= 10,
@@ -156,7 +159,7 @@ class WtMultipleBacktest:
 
 if __name__ == "__main__":
     
-    df_tradelist_full = pd.read_csv(s_dir_thisfile + "\\tradelist_backtest_test.csv", index_col=0)
+    df_tradelist_full = pd.read_csv(s_dir_thisfile + "\\test.csv", index_col=0)
     i_begin = 0 
     counter = 0
     if not os.path.isdir(s_dir_thisfile + "\\tradelists_backtest\\"):
@@ -164,8 +167,8 @@ if __name__ == "__main__":
     for i_row in range(1,df_tradelist_full.shape[0]):
         s_index = df_tradelist_full.index[i_row]
         s_lastindex = df_tradelist_full.index[i_row-1]
-        if df_tradelist_full.loc[s_index, 'beforeClose-mainContract_1'] != df_tradelist_full.loc[s_lastindex, 'beforeClose-mainContract_1'] or \
-            df_tradelist_full.loc[s_index, 'beforeClose-mainContract_2'] != df_tradelist_full.loc[s_lastindex, 'beforeClose-mainContract_2']:
+        if df_tradelist_full.loc[s_index, 'contract_1'] != df_tradelist_full.loc[s_lastindex, 'contract_1'] or \
+            df_tradelist_full.loc[s_index, 'contract_2'] != df_tradelist_full.loc[s_lastindex, 'contract_2']:
                 print(i_row)
                 df_tradelist_full.iloc[i_begin:i_row,:].to_csv(s_dir_thisfile + "\\tradelists_backtest\\tradelist_backtest_" + str(counter)+".csv")
                 counter += 1
